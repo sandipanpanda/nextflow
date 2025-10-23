@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nextflow-controller
+  namespace: nextflow
+  labels:
+    app: nextflow-controller
+spec:
+  serviceAccountName: nextflow-sa
+  containers:
+  - name: nextflow
+    image: nextflow/nextflow:24.10.0
+    command: ["/bin/bash", "-c"]
+    args:
+    - |
+      set -e
+      
+      echo "📦 Installing kubectl..."
+      curl -sLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+      chmod +x kubectl
+      mv kubectl /usr/local/bin/
+      
+      echo "📁 Setting up workspace..."
+      cd /workspace
+      mkdir -p project work
+      cd project
+      
+      # Copy pipeline files
+      cp /config/fibo-jobs.nf .
+      cp /config/nextflow.config .
+      
+      echo "✅ Setup complete! Ready for manual execution."
+      echo "📝 To run the pipeline manually, execute:"
+      echo "   nextflow run fibo-jobs.nf -c nextflow.config"
+      echo ""
+      echo "🔄 Keeping container alive for manual access..."
+      
+      # Keep container alive
+      tail -f /dev/null
+    volumeMounts:
+    - name: workspace
+      mountPath: /workspace
+    - name: config
+      mountPath: /config
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
+  volumes:
+  - name: workspace
+    persistentVolumeClaim:
+      claimName: nextflow-workspace
+  - name: config
+    configMap:
+      name: nextflow-pipeline
+  restartPolicy: Never
+  nodeSelector:
+    kubernetes.io/hostname: "test-nextflow-rke2-test-nextflow-rke2-pool1-n5jf6-h48xl"
