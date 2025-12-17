@@ -57,5 +57,5 @@ spec:
     configMap:
       name: nextflow-pipeline
   restartPolicy: Never
-  nodeSelector:
-    kubernetes.io/hostname: "test-nextflow-rke2-test-nextflow-rke2-pool1-n5jf6-h48xl"
+  # nodeSelector:
+  #   kubernetes.io/hostname: "test-nextflow-rke2-test-nextflow-rke2-pool1-n5jf6-h48xl"

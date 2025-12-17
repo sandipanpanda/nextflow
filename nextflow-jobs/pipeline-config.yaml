@@ -9,7 +9,7 @@ data:
     nextflow.enable.dsl=2
 
     workflow {
-        channel.of(1, 2, 3) | emitFibonacci
+        channel.of(1, 2, 3, 4, 5) | emitFibonacci
     }
 
     process emitFibonacci {
@@ -22,31 +22,34 @@ data:
         """
         echo "Starting Fibonacci generator for Task ${val}..."
 
-        python3 - <<'PYCODE'
-    import time
-    from datetime import datetime
+        a=0
+        b=1
+        for ((i=0; i<20000; i++)); do
+            current_time=\$(date '+%Y-%m-%d %H:%M:%S')
+            printf "[%s] Task %s - Fibonacci #%d: %s\n" "\$current_time" "${val}" "\$i" "\$a"
+            fn=\$((a + b))
+            a=\$b
+            b=\$fn
+            sleep 3
+        done
 
-    a, b = 0, 1
-    for i in range(20000):
-        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(f"[{current_time}] Task ${val} - Fibonacci #{i}: {a}", flush=True)
-        a, b = b, a + b
-        time.sleep(3)
-
-    print(f"Task ${val} completed!", flush=True)
-    PYCODE
+        echo "Task ${val} completed!"
         """
     }
 
   nextflow.config: |
     process {
       executor = 'k8s'
-      container = 'python:3.11'
+      container = 'quay.io/biocontainers/mulled-v2-fe8faa35dbf6dc65a0f7f5d4ea12e31a79f73e40:1bd8542a8a0b42e0981337910954371d0230828e-0'
       cpus = 1
       memory = '256 MB'
-      errorStrategy = 'retry(3)'
-      maxRetries = 1
-      pod = [annotation: 'dakr.devzero.io/runtime-dirs', value: '/']
+      errorStrategy = 'retry'
+      maxRetries = 30
+    }
+
+    executor {
+      retry.maxAttempts = 30    // must match process.maxRetries
+      retry.delay = '10 sec'   // wait 20s between retries
     }
 
     k8s {
